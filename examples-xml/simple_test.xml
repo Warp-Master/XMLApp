@@ -1,0 +1,58 @@
+<root>
+  <TestGroup name="Тест 1">
+    <TestCase>
+      <Name>Test Case 1</Name>
+      <Status>Failed</Status>
+      <Voltage>5V</Voltage>
+      <Current>2A</Current>
+    </TestCase>
+    <TestCase>
+      <Name>Test Case 2</Name>
+      <Status>Failed</Status>
+    </TestCase>
+  </TestGroup>
+  <TestGroup name="Тест 2">
+    <TestCase>
+      <Name>Test Case 3</Name>
+      <Status>Failed</Status>
+      <Voltage>3.3V</Voltage>
+      <Current>1A</Current>
+    </TestCase>
+    <TestCase>
+      <Name>Test Case 4</Name>
+      <Status>Passed</Status>
+      <Voltage>12V</Voltage>
+      <Current>0.5A</Current>
+    </TestCase>
+  </TestGroup>
+  <TestGroup name="Тест 3">
+    <TestCase>
+      <Name>Test Case 5</Name>
+      <Status>Passed</Status>
+      <Voltage>9V</Voltage>
+      <Current>1.5A</Current>
+    </TestCase>
+    <TestCase>
+      <Name>Test Case 6</Name>
+      <Status>Failed</Status>
+    </TestCase>
+  </TestGroup>
+  <TestGroup name="Тест 4">
+    <TestCase>
+      <Name>Test Case 7</Name>
+      <Status>Passed</Status>
+      <Voltage>9V</Voltage>
+      <Current>1.5A</Current>
+    </TestCase>
+    <TestCase>
+      <Name>Test Case 8</Name>
+      <Status>Passed</Status>
+    </TestCase>
+	 <TestCase>
+      <Name>Test Case 9</Name>
+      <Status>Passed</Status>
+      <Voltage>9V</Voltage>
+      <Current>1.5A</Current>
+    </TestCase>
+  </TestGroup>
+</root>
