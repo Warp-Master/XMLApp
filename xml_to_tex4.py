@@ -339,8 +339,8 @@ class Application(tk.Tk):
                                         treeview.heading("Value", text="Значение")
                                         treeview.heading("Dop", text="Допустимое значение")
                                         treeview.heading("String", text="String")
-                                        #Дублирование
-                                        #treeview.insert("", "end", values=(
+                                        # Дублирование
+                                        # treeview.insert("", "end", values=(
                                         #    name2, child.find('tr:outcome')['qualifier'], 'None', '-', string_val))
                                         list_treeview.append(treeview)
                                 except:

@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 from ttkthemes import ThemedTk
 from tkinter import messagebox
 
+
 class StartFrame(ttk.Frame):
     def __init__(self, container, controller, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
@@ -35,11 +36,11 @@ class StartFrame(ttk.Frame):
         ttk.Button(self, text="Start", command=self.start).grid(row=4, column=0, padx=5, pady=5)
 
         # Правая часть
-        #img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'photo1.jpg')
-        #img = Image.open(img_path)
-        #img = img.resize((300, 300))
-        #self.logo = ImageTk.PhotoImage(img)
-        #ttk.Label(self, image=self.logo).grid(row=0, column=1, rowspan=4, padx=5, pady=5, sticky='ne')
+        # img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'photo1.jpg')
+        # img = Image.open(img_path)
+        # img = img.resize((300, 300))
+        # self.logo = ImageTk.PhotoImage(img)
+        # ttk.Label(self, image=self.logo).grid(row=0, column=1, rowspan=4, padx=5, pady=5, sticky='ne')
 
         self.theme_combobox = ttk.Combobox(self, values=self.controller.available_themes)
         if self.controller.available_themes:
