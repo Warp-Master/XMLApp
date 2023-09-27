@@ -103,10 +103,110 @@ class XMLApp:
         self.available_themes = self.root.get_themes()
         self.root.set_theme('blue')
         self.root.title("XML Viewer")
-        self.root.geometry("700x330+100+100")
+        self.root.geometry("700x330")
         self.root.resizable(False, False)
         self.start_frame = StartFrame(self.root, self)  # Обратите внимание, что мы передаем self как controller
         self.start_frame.pack(expand=tk.YES, fill=tk.BOTH)
+
+    def copy_selected_value(self, event):
+        item = event.widget.focus()
+        item_text = event.widget.item(item, "text")
+        if item_text:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(item_text)
+            self.root.update()
+
+    def edit_value(self, event):
+        item = event.widget.focus()  # Получаем выделенный элемент
+        item_text = event.widget.item(item, "text")  # Получаем текст элемента
+        new_value = simpledialog.askstring("Edit Value", f"Edit value for {item_text}")  # Запрашиваем новое значение
+
+        if new_value is not None:
+            event.widget.item(item, text=new_value, values=(new_value, *event.widget.item(item, "values")[1:]))
+
+    def start_analysis(self, file_path):
+        result_window = tk.Toplevel(self.root)
+        result_window.title("Result")
+        result_window.geometry("1200x500")
+        result_window.resizable(False, False)
+
+        # Создаем Canvas и Scrollbar для горизонтальной прокрутки
+        # canvas = tk.Canvas(result_window)
+        # scrollbar = ttk.Scrollbar(result_window, orient="horizontal", command=canvas.xview)
+        # frame = ttk.Frame(canvas)
+        #
+        # canvas.config(xscrollcommand=scrollbar.set)
+        # scrollbar.pack(side="bottom", fill=X)
+        # canvas.pack(side="left", fill=BOTH, expand=True)
+        # canvas.create_window((0, 0), window=frame, anchor="nw")
+
+        root_note = ttk.Notebook(result_window)
+        root_note.pack(expand=tk.YES, fill=tk.BOTH)
+
+        # frame.bind("<Configure>", lambda _: canvas.config(scrollregion=canvas.bbox("all")))
+
+        if not file_path:
+            print("No file selected.")
+            return
+
+        try:
+            root = ET.parse(file_path).getroot()
+        except Exception as e:
+            print(f"Failed to parse XML: {e}")
+            return
+
+        # self.add_treeview(root, "Full Tree", tab_control)  # Здесь создается вкладка с полным деревом
+        self.populate_root_notebook(root, root_note)
+
+    def populate_root_notebook(self, xml_root, tab_control):
+        namespaces = {'tr': 'urn:IEEE-1636.1:2011:01:TestResults'}
+
+        for elem in xml_root.findall('.//tr:ResultSet', namespaces=namespaces):
+            for child in elem.findall('./*', namespaces=namespaces):
+                tag = child.tag.split('}')[-1]
+                if tag in ('TestGroup', 'Test'):
+                    name = child.get('callerName', child.get('name', 'Unknown'))
+                    if name != "Unknown":
+                        self.add_root_tab(child, name, tab_control)
+
+    def add_root_tab(self, xml_element, tab_name: str, notebook: ttk.Notebook):
+        # Создаем новый Frame для каждой вкладки
+        frame = ttk.Frame(notebook)
+        notebook.add(frame, text=tab_name)
+
+        # Создаем новый Notebook внутри frame
+        sub_notebook = ttk.Notebook(frame)
+        sub_notebook.pack(expand=True, fill='both')  # Используем pack для размещения Notebook внутри Frame
+
+        # Теперь для каждого дочернего элемента xml_element добавим вкладку в sub_notebook
+        for child in xml_element:
+            child_name = child.get('callerName', child.get('name', 'Unknown'))
+            if child_name != "Unknown":
+                self.add_treeview_tab(child, child_name, sub_notebook)
+
+    def add_treeview_tab(self, xml_element, tab_name: str, notebook: ttk.Notebook):
+        # Создаем Frame для каждой вкладки
+        # frame = ttk.Frame(tab_control)
+        # tab_control.add(frame, text=tab_name)
+
+        tree = ttk.Treeview(notebook, columns=("status", "value", "valid_values"))
+        notebook.add(tree, text=tab_name)
+        tree.pack(expand=tk.YES, fill=tk.BOTH)
+
+        tree.column("#0", width=270, minwidth=270)
+        tree.column("status", width=150, minwidth=150)
+        tree.column("value", width=150, minwidth=150)
+        tree.column("valid_values", width=150, minwidth=150)
+
+        tree.heading("#0", text="Treeview")
+        tree.heading("status", text="Status")
+        tree.heading("value", text="Value")
+        tree.heading("valid_values", text="Valid Values")
+
+        tree.bind("<Button-3>", self.copy_selected_value)
+        tree.bind("<Double-1>", self.edit_value)
+
+        self.populate_tree(tree, xml_element)
 
     # Метод для добавления элементов в дерево
     def populate_tree(self, tree, elem, parent="", level=1):
@@ -144,107 +244,6 @@ class XMLApp:
                 inserted_id = tree.insert(parent, tk.END, text=name, values=(
                     status, value, valid_values_str))  # Добавление статуса, значения и допустимых значений в дерево
                 self.populate_tree(tree, child, inserted_id, level + 1)
-
-    def copy_selected_value(self, event):
-        item = event.widget.focus()
-        item_text = event.widget.item(item, "text")
-        if item_text:
-            self.root.clipboard_clear()
-            self.root.clipboard_append(item_text)
-            self.root.update()
-
-    def edit_value(self, event):
-        item = event.widget.focus()  # Получаем выделенный элемент
-        item_text = event.widget.item(item, "text")  # Получаем текст элемента
-        new_value = simpledialog.askstring("Edit Value", f"Edit value for {item_text}")  # Запрашиваем новое значение
-
-        if new_value is not None:
-            event.widget.item(item, text=new_value, values=(new_value, *event.widget.item(item, "values")[1:]))
-
-    def start_analysis(self, file_path):
-        result_window = tk.Toplevel(self.root)
-        result_window.title("Result")
-        result_window.geometry("800x500+100+100")
-        result_window.resizable(False, False)
-
-        # Создаем Canvas и Scrollbar для горизонтальной прокрутки
-        canvas = tk.Canvas(result_window)
-        scrollbar = ttk.Scrollbar(result_window, orient="horizontal", command=canvas.xview)
-        frame = ttk.Labelframe(canvas)
-
-        canvas.config(xscrollcommand=scrollbar.set)
-        scrollbar.pack(side="bottom", fill="x")
-        canvas.pack(side="left", fill="both", expand=True)
-        canvas.create_window((0, 0), window=frame, anchor="nw")
-
-        # Создаем Notebook внутри Frame
-        tab_control = ttk.Notebook(frame)
-        tab_control.pack(expand=tk.YES, fill=tk.BOTH)
-
-        frame.bind("<Configure>", lambda _: canvas.config(scrollregion=canvas.bbox("all")))
-
-        if not file_path:
-            print("No file selected.")
-            return
-
-        try:
-            tree = ET.parse(file_path)
-            root = tree.getroot()
-        except Exception as e:
-            print(f"Failed to parse XML: {e}")
-            return
-
-        # self.add_treeview(root, "Full Tree", tab_control)  # Здесь создается вкладка с полным деревом
-        self.populate_root_notebook(root, tab_control)
-
-    def populate_root_notebook(self, xml_root, tab_control):
-        namespaces = {'tr': 'urn:IEEE-1636.1:2011:01:TestResults'}
-
-        for elem in xml_root.findall('.//tr:ResultSet', namespaces=namespaces):
-            for child in elem.findall('./*', namespaces=namespaces):
-                tag = child.tag.split('}')[-1]
-                if tag in ('TestGroup', 'Test'):
-                    name = child.get('callerName', child.get('name', 'Unknown'))
-                    if name != "Unknown":
-                        self.add_notebook_tab(child, name, tab_control)
-
-    def add_notebook_tab(self, xml_element, tab_name, tab_control):
-        # Создаем новый Labelframe для каждой вкладки
-        labelframe = ttk.Labelframe(tab_control)
-        tab_control.add(labelframe, text=tab_name)
-
-        # Создаем новый Notebook внутри Labelframe
-        sub_notebook = ttk.Notebook(labelframe)
-        sub_notebook.pack(expand=True, fill='both')  # Используем pack для размещения Notebook внутри Labelframe
-
-        # Теперь для каждого дочернего элемента xml_element добавим вкладку в sub_notebook
-        for child in xml_element:
-            child_name = child.get('callerName', child.get('name', 'Unknown'))
-            if child_name != "Unknown":
-                self.add_treeview(child, child_name, sub_notebook)
-
-    def add_treeview(self, xml_element, tab_name, tab_control):
-        # Создаем Frame для каждой вкладки
-        frame = ttk.Labelframe(tab_control)
-        tab_control.add(frame, text=tab_name)
-
-        tree = ttk.Treeview(frame, columns=("status", "value", "valid_values"))
-        tree.pack(expand=tk.YES, fill=tk.BOTH)
-
-        tree.column("#0", width=270, minwidth=270)
-        tree.column("status", width=150, minwidth=150)
-        tree.column("value", width=150, minwidth=150)
-        tree.column("valid_values", width=150, minwidth=150)
-
-        tree.heading("#0", text="Treeview")
-        tree.heading("status", text="Status")
-        tree.heading("value", text="Value")
-        tree.heading("valid_values", text="Valid Values")
-
-        tree.bind("<Button-3>", self.copy_selected_value)  # Добавил привязку события правой кнопки мыши
-        tree.bind("<Double-1>", self.edit_value)  # Добавил привязку события двойного щелчка
-
-        self.populate_tree(tree, xml_element)
 
 
 def main():
