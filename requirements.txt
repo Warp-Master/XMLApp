@@ -1,3 +1,4 @@
 Pillow
 beautifulsoup4
 ttkthemes
+lxml
