@@ -1,11 +1,13 @@
 import os
 import tkinter as tk
-from tkinter import ttk, YES, BOTH
-from tkinter import filedialog
 import xml.etree.ElementTree as ET
-from PIL import Image, ImageTk
-from ttkthemes import ThemedTk
+from tkinter import filedialog
 from tkinter import messagebox
+from tkinter import ttk, simpledialog
+
+from ttkthemes import ThemedTk
+
+from switch import Switch
 
 
 class StartFrame(ttk.Frame):
@@ -34,13 +36,6 @@ class StartFrame(ttk.Frame):
         self.file_listbox.grid(row=3, column=0, padx=5, pady=5, sticky='nsew')
 
         ttk.Button(self, text="Start", command=self.start).grid(row=4, column=0, padx=5, pady=5)
-
-        # Правая часть
-        # img_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'photo1.jpg')
-        # img = Image.open(img_path)
-        # img = img.resize((300, 300))
-        # self.logo = ImageTk.PhotoImage(img)
-        # ttk.Label(self, image=self.logo).grid(row=0, column=1, rowspan=4, padx=5, pady=5, sticky='ne')
 
         self.theme_combobox = ttk.Combobox(self, values=self.controller.available_themes)
         if self.controller.available_themes:
@@ -101,37 +96,17 @@ class StartFrame(ttk.Frame):
 
 class XMLApp:
     def __init__(self, root):
-        self.tab_control = None
+        self.tab_control = ttk.Notebook(root)
         self.menu = None
+        self.file_menu = None
         self.root = root
         self.available_themes = self.root.get_themes()
         self.root.set_theme('blue')
         self.root.title("XML Viewer")
         self.root.geometry("700x330+100+100")
         self.root.resizable(False, False)
-        self.init_ui()  # Вызов метода init_ui
         self.start_frame = StartFrame(self.root, self)  # Обратите внимание, что мы передаем self как controller
         self.start_frame.pack(expand=tk.YES, fill=tk.BOTH)
-
-    def init_ui(self):
-        # Инициализация пользовательского интерфейса
-        self.tab_control = ttk.Notebook(self.root)
-        self.menu = tk.Menu(self.root)
-        self.root.config(menu=self.menu)
-        self.file_menu = tk.Menu(self.menu)
-        # self.menu.add_cascade(label="File", menu=self.file_menu)
-        self.file_menu.add_command(label="Open", command=self.load_xml)
-
-    # Метод для загрузки и анализа XML файла
-    def load_xml(self, root, tab_control):
-        namespaces = {
-            'tr': 'urn:IEEE-1636.1:2011:01:TestResults'
-        }
-
-        for elem in root.findall(".//tr:ResultSet", namespaces=namespaces):
-            for child in elem.findall("./tr:TestGroup | ./tr:Test", namespaces=namespaces):
-                tab_name = child.get('callerName', child.get('name', 'Unknown'))
-                self.add_tab(child, tab_name, tab_control)
 
     # Метод для добавления новой вкладки в Notebook
     def add_tab(self, elem, name, tab_control):
@@ -139,6 +114,8 @@ class XMLApp:
         tab_control.add(tab, text=name)
 
         tree = ttk.Treeview(tab, columns=("Value",), show="tree headings")
+        tree.bind("<Button-3>", self.copy_selected_value)  # Добавил привязку события правой кнопки мыши
+        tree.bind("<Double-1>", self.edit_value)  # Добавил привязку события двойного щелчка
         tree.column("#0", width=200)
         tree.column("Status", width=200)
         tree.heading("Status", text="Status")
@@ -184,9 +161,10 @@ class XMLApp:
                 if name == "Unknown":
                     continue
 
-                id = tree.insert(parent, tk.END, text=name, values=(
+                inserted_id = tree.insert(parent, tk.END, text=name, values=(
                     status, value, valid_values_str))  # Добавление статуса, значения и допустимых значений в дерево
                 self.populate_tree(tree, child, id, level + 1)
+                self.populate_tree(tree, child, inserted_id, level + 1)
 
     # Метод для анализа выбранного файла и отображения результатов в новом окне
     def start_analysis(self, file_path):
@@ -209,7 +187,7 @@ class XMLApp:
         tab_control = ttk.Notebook(frame)
         tab_control.pack(expand=tk.YES, fill=tk.BOTH)
 
-        frame.bind("<Configure>", lambda e: canvas.config(scrollregion=canvas.bbox("all")))
+        frame.bind("<Configure>", lambda _: canvas.config(scrollregion=canvas.bbox("all")))
 
         if not file_path:
             print("No file selected.")
@@ -222,21 +200,19 @@ class XMLApp:
             print(f"Failed to parse XML: {e}")
             return
 
-        # self.add_tree_tab(root, "Full Tree", tab_control)  # Здесь создается вкладка с полным деревом
-        self.add_tabs_from_xml(root, tab_control)
+        # self.add_treeview(root, "Full Tree", tab_control)  # Здесь создается вкладка с полным деревом
+        self.populate_root_notebook(root, tab_control)
 
-    def add_tabs_from_xml(self, xml_root, tab_control):
+    def populate_root_notebook(self, xml_root, tab_control):
         namespaces = {'tr': 'urn:IEEE-1636.1:2011:01:TestResults'}
 
         for elem in xml_root.findall('.//tr:ResultSet', namespaces=namespaces):
             for child in elem.findall('./*', namespaces=namespaces):
                 tag = child.tag.split('}')[-1]
-                if tag in ['TestGroup', 'Test']:
+                if tag in ('TestGroup', 'Test'):
                     name = child.get('callerName', child.get('name', 'Unknown'))
-                    if name == "Unknown":
-                        continue
-                    # Вместо добавления вкладки дерева добавляем вкладку Notebook
-                    self.add_notebook_tab(child, name, tab_control)
+                    if name != "Unknown":
+                        self.add_notebook_tab(child, name, tab_control)
 
     def add_notebook_tab(self, xml_element, tab_name, tab_control):
         # Создаем новый Labelframe для каждой вкладки
@@ -244,16 +220,16 @@ class XMLApp:
         tab_control.add(labelframe, text=tab_name)
 
         # Создаем новый Notebook внутри Labelframe
-        sub_tab_control = ttk.Notebook(labelframe)
-        sub_tab_control.pack(expand=1, fill='both')  # Используем pack для размещения Notebook внутри Labelframe
+        sub_notebook = ttk.Notebook(labelframe)
+        sub_notebook.pack(expand=True, fill='both')  # Используем pack для размещения Notebook внутри Labelframe
 
-        # Теперь для каждого дочернего элемента xml_element добавим вкладку в sub_tab_control
-        for sub_elem in xml_element:
-            sub_name = sub_elem.get('callerName', sub_elem.get('name', 'Unknown'))
-            if sub_name != "Unknown":
-                self.add_tree_tab(sub_elem, sub_name, sub_tab_control)
+        # Теперь для каждого дочернего элемента xml_element добавим вкладку в sub_notebook
+        for child in xml_element:
+            child_name = child.get('callerName', child.get('name', 'Unknown'))
+            if child_name != "Unknown":
+                self.add_treeview(child, child_name, sub_notebook)
 
-    def add_tree_tab(self, xml_element, tab_name, tab_control):
+    def add_treeview(self, xml_element, tab_name, tab_control):
         # Создаем Frame для каждой вкладки
         frame = ttk.Labelframe(tab_control)
         tab_control.add(frame, text=tab_name)
@@ -272,99 +248,6 @@ class XMLApp:
         tree.heading("valid_values", text="Valid Values")
 
         self.populate_tree(tree, xml_element)
-
-    def populate_full_tree(self, tree, elem, parent="", level=1):
-        name = elem.tag
-        value = elem.text.strip() if elem.text else "N/A"
-        namespaces = {'tr': 'urn:IEEE-1636.1:2011:01:TestResults'}
-
-        # Если элемент является tr:TestGroup или tr:Test, или является их потомком
-        if 'TestGroup' in name or 'Test' in name or parent:
-            # Добавляем текущий элемент как узел в дерево
-            id = tree.insert(parent, tk.END, text=name, values=(value,))
-
-            # Рекурсивно обходим дочерние элементы
-            for child in elem.findall(".//*", namespaces=namespaces):
-                self.populate_full_tree(tree, child, id, level + 1)
-
-
-class Switch(tk.Canvas):
-    def __init__(self, parent, *args, **kwargs):
-        super().__init__(parent, width=40, height=20, *args, **kwargs)
-        self.value = False  # Переключатель выключен по умолчанию
-        self.configure(borderwidth=0, highlightthickness=0)  # Убираем рамку
-
-        # Сам переключатель
-        self.rect = self.create_rectangle(1, 1, 40, 20, outline='black', fill='red', width=1, tags='rect')
-
-        # Белый кругляш
-        self.oval = self.create_oval(2, 2, 18, 18, outline='black', fill='white', tags='oval')
-
-        self.tag_bind('oval', '<1>', self.toggle)
-        self.tag_bind('rect', '<1>', self.toggle)
-
-    # Метод для переключения состояния Switch
-    def toggle(self, event=None):
-        self.value = not self.value
-        fill_color = 'green' if self.value else 'red'
-        oval_x0, oval_y0, oval_x1, oval_y1 = (22, 2, 38, 18) if self.value else (2, 2, 18, 18)
-        self.coords(self.oval, oval_x0, oval_y0, oval_x1, oval_y1)
-        self.itemconfig(self.rect, fill=fill_color)
-        self.event_generate('<<SwitchToggled>>')  # Генерируем событие при переключении
-
-    @property
-    def is_on(self):
-        return self.value
-
-
-class ScrollableNotebook(ttk.Frame):
-    def __init__(self, container, *args, **kwargs):
-        super().__init__(container, *args, **kwargs)
-        self.canvas = tk.Canvas(self)
-        self.scrollbar = ttk.Scrollbar(self, orient="horizontal", command=self.canvas.xview)
-        self.notebook = ttk.Notebook(self.canvas)
-
-        self.notebook.bind("<Configure>", self.on_configure)
-        self.canvas.configure(xscrollcommand=self.scrollbar.set)
-
-        self.canvas.pack(side="top", fill="both", expand=True)
-        self.scrollbar.pack(side="bottom", fill="x")
-        self.canvas.create_window((0, 0), window=self.notebook, anchor="nw")
-
-    # Метод для обновления области прокрутки при изменении размера Notebook
-    def on_configure(self, event):
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-
-    # Метод для добавления новой вкладки в ScrollableNotebook
-    def add(self, tab, text):
-        self.notebook.add(tab, text=text)
-
-    def pack(self, *args, **kwargs):
-        super().pack(*args, **kwargs)
-
-
-class VerticalScrollableNotebook(ttk.Frame):
-    def __init__(self, container, *args, **kwargs):
-        super().__init__(container, *args, **kwargs)
-        self.canvas = tk.Canvas(self)
-        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
-        self.notebook = ttk.Notebook(self.canvas)
-
-        self.notebook.bind("<Configure>", self.on_configure)
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
-        self.canvas.create_window((0, 0), window=self.notebook, anchor="nw")
-
-    def on_configure(self, event):
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-
-    def add(self, tab, text):
-        self.notebook.add(tab, text=text)
-
-    def pack(self, *args, **kwargs):
-        super().pack(*args, **kwargs)
 
 
 def main():
