@@ -24,9 +24,6 @@ class ScrollableNotebook(ttk.Frame):
     def add(self, tab, text):
         self.notebook.add(tab, text=text)
 
-    def pack(self, *args, **kwargs):
-        super().pack(*args, **kwargs)
-
 
 class VerticalScrollableNotebook(ttk.Frame):
     def __init__(self, container, *args, **kwargs):
@@ -47,6 +44,3 @@ class VerticalScrollableNotebook(ttk.Frame):
 
     def add(self, tab, text):
         self.notebook.add(tab, text=text)
-
-    def pack(self, *args, **kwargs):
-        super().pack(*args, **kwargs)
