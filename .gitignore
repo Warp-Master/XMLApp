@@ -1,3 +1,4 @@
 .idea/
 venv/
 documentation/
+__pycache__/
