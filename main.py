@@ -108,21 +108,6 @@ class XMLApp:
         self.start_frame = StartFrame(self.root, self)  # Обратите внимание, что мы передаем self как controller
         self.start_frame.pack(expand=tk.YES, fill=tk.BOTH)
 
-    # Метод для добавления новой вкладки в Notebook
-    def add_tab(self, elem, name, tab_control):
-        tab = ttk.Frame(tab_control)
-        tab_control.add(tab, text=name)
-
-        tree = ttk.Treeview(tab, columns=("Value",), show="tree headings")
-        tree.bind("<Button-3>", self.copy_selected_value)  # Добавил привязку события правой кнопки мыши
-        tree.bind("<Double-1>", self.edit_value)  # Добавил привязку события двойного щелчка
-        tree.column("#0", width=200)
-        tree.column("Status", width=200)
-        tree.heading("Status", text="Status")
-        tree.pack(fill='both', expand=True)
-
-        self.populate_tree(tree, elem)
-
     # Метод для добавления элементов в дерево
     def populate_tree(self, tree, elem, parent="", level=1):
         namespaces = {
@@ -136,11 +121,6 @@ class XMLApp:
             # Извлечение значения атрибута 'value' из тега 'tr:Outcome'
             outcome = child.find('./tr:Outcome', namespaces=namespaces)
             status = outcome.get('value') if outcome is not None else 'N/A'
-
-            # Извлечение данных из тега 'tr:Data'
-            data_elems = child.findall('./tr:Data/c:Collection/c:Item/c:Datum', namespaces=namespaces)
-            data_values = [datum.get('value') for datum in data_elems] if data_elems else ['N/A']
-            data_str = ', '.join(data_values)  # Преобразование списка значений в строку, разделенную запятыми
 
             # Извлечение данных из тега 'tr:TestResult'
             test_result_elems = child.findall('.//tr:TestResult', namespaces=namespaces)
@@ -163,10 +143,24 @@ class XMLApp:
 
                 inserted_id = tree.insert(parent, tk.END, text=name, values=(
                     status, value, valid_values_str))  # Добавление статуса, значения и допустимых значений в дерево
-                self.populate_tree(tree, child, id, level + 1)
                 self.populate_tree(tree, child, inserted_id, level + 1)
 
-    # Метод для анализа выбранного файла и отображения результатов в новом окне
+    def copy_selected_value(self, event):
+        item = event.widget.focus()
+        item_text = event.widget.item(item, "text")
+        if item_text:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(item_text)
+            self.root.update()
+
+    def edit_value(self, event):
+        item = event.widget.focus()  # Получаем выделенный элемент
+        item_text = event.widget.item(item, "text")  # Получаем текст элемента
+        new_value = simpledialog.askstring("Edit Value", f"Edit value for {item_text}")  # Запрашиваем новое значение
+
+        if new_value is not None:
+            event.widget.item(item, text=new_value, values=(new_value, *event.widget.item(item, "values")[1:]))
+
     def start_analysis(self, file_path):
         result_window = tk.Toplevel(self.root)
         result_window.title("Result")
@@ -246,6 +240,9 @@ class XMLApp:
         tree.heading("status", text="Status")
         tree.heading("value", text="Value")
         tree.heading("valid_values", text="Valid Values")
+
+        tree.bind("<Button-3>", self.copy_selected_value)  # Добавил привязку события правой кнопки мыши
+        tree.bind("<Double-1>", self.edit_value)  # Добавил привязку события двойного щелчка
 
         self.populate_tree(tree, xml_element)
 
