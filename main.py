@@ -186,11 +186,10 @@ class XMLApp:
 
     def add_treeview_tab(self, xml_element, tab_name: str, notebook: ttk.Notebook):
         # Создаем Frame для каждой вкладки
-        # frame = ttk.Frame(tab_control)
-        # tab_control.add(frame, text=tab_name)
+        frame = ttk.Frame(notebook)
+        notebook.add(frame, text=tab_name)
 
-        tree = ttk.Treeview(notebook, columns=("status", "value", "valid_values"))
-        notebook.add(tree, text=tab_name)
+        tree = ttk.Treeview(frame, columns=("status", "value", "valid_values"))
         tree.pack(expand=tk.YES, fill=tk.BOTH)
 
         tree.column("#0", width=270, minwidth=270)
