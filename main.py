@@ -53,7 +53,7 @@ class StartFrame(ttk.Frame):
         self.grid_rowconfigure(3, weight=1)
 
     def generate_tex(self):
-        self.controller.generate_tex_file(self.controller.start_frame.file_treeview)
+        self.controller.generate_file(self.controller.start_frame.file_treeview, )
 
     def apply_theme(self):
         selected_theme = self.theme_combobox.get()  # Получаем выбранную тему
@@ -98,6 +98,24 @@ class StartFrame(ttk.Frame):
         self.controller.start_analysis(file_path)
 
 
+def generate_file(tree, tree_title):
+    filetypes = [("TeX files", "*.tex"), ("Text", "*.txt")]
+    file_path = filedialog.asksaveasfilename(defaultextension=".tex", filetypes=filetypes)
+    if not file_path:
+        return
+
+    def write_row(f, rid):
+        f.write('\t'.join((
+            tree.item(rid, 'text'),
+            *tree.item(rid, 'values')
+        ))+'\n')
+
+    with open(file_path, 'w') as file:
+        file.write(f"{tree_title}\n")
+        for rowid in tree.get_children():
+            write_row(file, rowid)
+
+
 class XMLApp:
     def __init__(self, root):
         self.tab_control = ttk.Notebook(root)
@@ -111,21 +129,6 @@ class XMLApp:
         self.root.resizable(False, False)
         self.start_frame = StartFrame(self.root, self)  # Обратите внимание, что мы передаем self как controller
         self.start_frame.pack(expand=tk.YES, fill=tk.BOTH)
-
-    def generate_tex_file(self, tree, tree_title):
-        file_path = filedialog.asksaveasfilename(defaultextension=".tex", filetypes=[("TeX files", "*.tex")])
-        if file_path:
-            with open(file_path, 'w') as tex_file:
-                tex_file.write(f"{tree_title}\n")
-
-                def write_item_to_tex(item):
-                    name = tree.item(item, "text")
-                    values = tree.item(item, "values")
-                    status, value, valid_values = values[0], values[1], values[2]
-                    tex_file.write(f"{name}\t{status}\t{value}\t{valid_values}\n")
-
-                for item_id in tree.get_children():
-                    write_item_to_tex(item_id)
 
     def copy_selected_value(self, event):
         rowid = event.widget.focus()
@@ -234,7 +237,7 @@ class XMLApp:
 
         self.populate_tree(tree, xml_element)
 
-        generate_button = ttk.Button(frame, text="Generate", command=lambda: self.generate_tex_file(tree, tab_name))
+        generate_button = ttk.Button(frame, text="Generate", command=lambda: generate_file(tree, tab_name))
         generate_button.pack()
 
         self.populate_tree(tree, xml_element)
