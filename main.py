@@ -118,13 +118,26 @@ class XMLApp:
             self.root.clipboard_append(line)
             self.root.update()
 
+    # def edit_value(self, event):
+    #     item = event.widget.focus()  # Получаем выделенный элемент
+    #     item_text = event.widget.item(item, "text")  # Получаем текст элемента
+    #     new_value = simpledialog.askstring("Edit Value", f"Edit value for {item_text}")  # Запрашиваем новое значение
+    #
+    #     if new_value is not None:
+    #         event.widget.item(item, text=new_value, values=(new_value, *event.widget.item(item, "values")[1:]))
     def edit_value(self, event):
         item = event.widget.focus()  # Получаем выделенный элемент
-        item_text = event.widget.item(item, "text")  # Получаем текст элемента
-        new_value = simpledialog.askstring("Edit Value", f"Edit value for {item_text}")  # Запрашиваем новое значение
+        column = event.widget.identify_column(event.x)  # Определяем, в каком столбце произошел клик
+        col_num = int(column.split('#')[-1]) # Получаем номер столбца
+
+        column_name = event.widget.heading(col_num)["text"]
+        new_value = simpledialog.askstring("Edit Value", f"Edit value for {column_name}")
 
         if new_value is not None:
-            event.widget.item(item, text=new_value, values=(new_value, *event.widget.item(item, "values")[1:]))
+            values = event.widget.item(item, "values")
+            values = list(values)
+            values[col_num] = new_value  # Обновляем значение в соответствующем столбце
+            event.widget.item(item, values=values)  # Устанавливаем обновленные значения
 
     def start_analysis(self, file_path):
         result_window = tk.Toplevel(self.root)
@@ -207,6 +220,7 @@ class XMLApp:
         tree.bind("<Button-3>", self.copy_selected_value)
         tree.bind("<Control-c>", self.copy_selected_value)
         tree.bind("<Double-1>", self.edit_value)
+        tree.bind("<Control-e>", self.edit_value)
 
         self.populate_tree(tree, xml_element)
 
