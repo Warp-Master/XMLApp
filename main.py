@@ -8,6 +8,7 @@ from tkinter import ttk, simpledialog
 from ttkthemes import ThemedTk
 
 from switch import Switch
+from scrollable_notebook import ScrollableNotebook
 
 
 class StartFrame(ttk.Frame):
@@ -140,7 +141,7 @@ class XMLApp:
         # canvas.pack(side="left", fill=BOTH, expand=True)
         # canvas.create_window((0, 0), window=frame, anchor="nw")
 
-        root_note = ttk.Notebook(result_window)
+        root_note = ScrollableNotebook(result_window, wheelscroll=True, tabmenu=True)
         root_note.pack(expand=tk.YES, fill=tk.BOTH)
 
         # frame.bind("<Configure>", lambda _: canvas.config(scrollregion=canvas.bbox("all")))
@@ -175,7 +176,7 @@ class XMLApp:
         notebook.add(frame, text=tab_name)
 
         # Создаем новый Notebook внутри frame
-        sub_notebook = ttk.Notebook(frame)
+        sub_notebook = ScrollableNotebook(frame, wheelscroll=True, tabmenu=True)
         sub_notebook.pack(expand=True, fill='both')  # Используем pack для размещения Notebook внутри Frame
 
         # Теперь для каждого дочернего элемента xml_element добавим вкладку в sub_notebook
@@ -242,7 +243,7 @@ class XMLApp:
 
                 inserted_id = tree.insert(parent, tk.END, text=name, values=(
                     status, value, valid_values_str))  # Добавление статуса, значения и допустимых значений в дерево
-                self.populate_tree(tree, child, inserted_id, level + 1)
+                self.populate_tree(tree, child, parent=inserted_id, level=level + 1)
 
 
 def main():
