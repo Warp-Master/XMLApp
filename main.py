@@ -212,7 +212,7 @@ class XMLApp:
             if child_name != "Unknown":
                 self.add_treeview_tab(child, child_name, sub_notebook)
 
-    def add_treeview_tab(self, xml_element, tab_name: str, notebook: ttk.Notebook):
+    def add_treeview_tab(self, xml_element, tab_name, notebook):
         # Создаем Frame для каждой вкладки
         frame = ttk.Frame(notebook)
         notebook.add(frame, text=tab_name)
@@ -282,7 +282,7 @@ class XMLApp:
 
 def main():
     root = ThemedTk()  # Используем ThemedTk вместо стандартного Tk
-    app = XMLApp(root)
+    XMLApp(root)
     root.mainloop()
 
 
