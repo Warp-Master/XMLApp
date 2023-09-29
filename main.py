@@ -128,34 +128,26 @@ class XMLApp:
                     write_item_to_tex(item_id)
 
     def copy_selected_value(self, event):
-        focused = event.widget.focus()
-        item = event.widget.item(focused)
-        line = '\t'.join((item['text'], *item['values']))
+        rowid = event.widget.focus()
+        line = '\t'.join((
+            event.widget.item(rowid, 'text'),
+            *event.widget.item(rowid, 'values')
+        ))
         if line:
-            self.root.clipboard_clear()
             self.root.clipboard_append(line)
             self.root.update()
 
-    # def edit_value(self, event):
-    #     item = event.widget.focus()  # Получаем выделенный элемент
-    #     item_text = event.widget.item(item, "text")  # Получаем текст элемента
-    #     new_value = simpledialog.askstring("Edit Value", f"Edit value for {item_text}")  # Запрашиваем новое значение
-    #
-    #     if new_value is not None:
-    #         event.widget.item(item, text=new_value, values=(new_value, *event.widget.item(item, "values")[1:]))
-    def edit_value(self, event):
-        item = event.widget.focus()  # Получаем выделенный элемент
+    @staticmethod
+    def edit_value(event):
+        rowid = event.widget.focus()  # Получаем выделенный элемент
         column = event.widget.identify_column(event.x)  # Определяем, в каком столбце произошел клик
-        col_num = int(column.split('#')[-1]) # Получаем номер столбца
+        col_num = int(column[1:])  # Получаем номер столбца
 
-        column_name = event.widget.heading(col_num)["text"]
-        new_value = simpledialog.askstring("Edit Value", f"Edit value for {column_name}")
-
-        if new_value is not None:
-            values = event.widget.item(item, "values")
-            values = list(values)
-            values[col_num] = new_value  # Обновляем значение в соответствующем столбце
-            event.widget.item(item, values=values)  # Устанавливаем обновленные значения
+        new_value = simpledialog.askstring("Edit Value", f"Enter new value")
+        if new_value is not None and new_value.strip():
+            line = [event.widget.item(rowid, 'text'), *event.widget.item(rowid, 'values')]
+            line[col_num] = new_value
+            event.widget.item(rowid, text=line[0], values=line[1:])
 
     def start_analysis(self, file_path):
         result_window = tk.Toplevel(self.root)
