@@ -110,11 +110,12 @@ class XMLApp:
         self.start_frame.pack(expand=tk.YES, fill=tk.BOTH)
 
     def copy_selected_value(self, event):
-        item = event.widget.focus()
-        item_text = event.widget.item(item, "text")
-        if item_text:
+        focused = event.widget.focus()
+        item = event.widget.item(focused)
+        line = '\t'.join((item['text'], *item['values']))
+        if line:
             self.root.clipboard_clear()
-            self.root.clipboard_append(item_text)
+            self.root.clipboard_append(line)
             self.root.update()
 
     def edit_value(self, event):
@@ -129,7 +130,7 @@ class XMLApp:
         result_window = tk.Toplevel(self.root)
         result_window.title("Result")
         result_window.geometry("1200x500")
-        result_window.resizable(False, False)
+        result_window.resizable(True, True)
 
         # Создаем Canvas и Scrollbar для горизонтальной прокрутки
         # canvas = tk.Canvas(result_window)
@@ -204,6 +205,7 @@ class XMLApp:
         tree.heading("valid_values", text="Valid Values")
 
         tree.bind("<Button-3>", self.copy_selected_value)
+        tree.bind("<Control-c>", self.copy_selected_value)
         tree.bind("<Double-1>", self.edit_value)
 
         self.populate_tree(tree, xml_element)
