@@ -137,8 +137,24 @@ class XMLApp:
             *event.widget.item(rowid, 'values')
         ))
         if line:
+            self.root.clipboard_clear()
             self.root.clipboard_append(line)
             self.root.update()
+
+    def copy_values(self, event):
+        self.root.clipboard_clear()
+        tree = event.widget
+        selected_item = tree.focus()
+
+        if tree.item(selected_item, 'open'):
+            children = tree.get_children(selected_item)
+
+            for child in children:
+                line = '\t'.join((
+                    event.widget.item(child, 'text'),
+                    *event.widget.item(child, 'values')
+                ))
+                self.root.clipboard_append(line + "\n")
 
     @staticmethod
     def edit_value(event):
@@ -225,6 +241,7 @@ class XMLApp:
         tree.bind("<Control-c>", self.copy_selected_value)
         tree.bind("<Double-1>", self.edit_value)
         tree.bind("<Control-e>", self.edit_value)
+        tree.bind("<Control-r>", self.copy_values)
 
         generate_button = ttk.Button(tree, text="Generate", command=lambda: generate_file(tree, tab_name))
         generate_button.pack(expand=False, anchor='se', side='bottom')
