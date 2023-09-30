@@ -160,7 +160,6 @@ class XMLApp:
 
         # Создаем Canvas и Scrollbar для горизонтальной прокрутки
         # canvas = tk.Canvas(result_window)
-        # scrollbar = ttk.Scrollbar(result_window, orient="horizontal", command=canvas.xview)
         # frame = ttk.Frame(canvas)
         #
         # canvas.config(xscrollcommand=scrollbar.set)
@@ -170,6 +169,7 @@ class XMLApp:
 
         root_note = ScrollableNotebook(result_window, wheelscroll=True, tabmenu=True)
         root_note.pack(expand=tk.YES, fill=tk.BOTH)
+
 
         # frame.bind("<Configure>", lambda _: canvas.config(scrollregion=canvas.bbox("all")))
 
@@ -249,6 +249,9 @@ class XMLApp:
             "c": "urn:IEEE-1671:2010:Common"
         }
 
+        prev_name = None
+        prev_id = None
+
         for child in elem:
             name = child.attrib.get('callerName', child.attrib.get('name', 'Unknown'))
 
@@ -275,9 +278,19 @@ class XMLApp:
                 if name == "Unknown":
                     continue
 
-                inserted_id = tree.insert(parent, tk.END, text=name, values=(
-                    status, value, valid_values_str))  # Добавление статуса, значения и допустимых значений в дерево
-                self.populate_tree(tree, child, parent=inserted_id, level=level + 1)
+                if prev_name == name and level == 1:
+                    # Если текущее значение name совпадает с предыдущим и уровень вложенности равен 1, создаем список
+                    if prev_id is None:
+                        parent_id = tree.insert(parent, tk.END, text=name)
+                    else:
+                        parent_id = tree.insert(prev_id, tk.END, text=name)
+                else:
+                    parent_id = tree.insert(parent, tk.END, text=name, values=(
+                        status, value, valid_values_str))
+                    prev_name = name
+                    prev_id = parent_id
+
+                self.populate_tree(tree, child, parent=parent_id, level=level + 1)
 
 
 def main():
