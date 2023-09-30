@@ -158,20 +158,8 @@ class XMLApp:
         result_window.geometry("1200x500")
         result_window.resizable(True, True)
 
-        # Создаем Canvas и Scrollbar для горизонтальной прокрутки
-        # canvas = tk.Canvas(result_window)
-        # frame = ttk.Frame(canvas)
-        #
-        # canvas.config(xscrollcommand=scrollbar.set)
-        # scrollbar.pack(side="bottom", fill=X)
-        # canvas.pack(side="left", fill=BOTH, expand=True)
-        # canvas.create_window((0, 0), window=frame, anchor="nw")
-
         root_note = ScrollableNotebook(result_window, wheelscroll=True, tabmenu=True)
         root_note.pack(expand=tk.YES, fill=tk.BOTH)
-
-
-        # frame.bind("<Configure>", lambda _: canvas.config(scrollregion=canvas.bbox("all")))
 
         if not file_path:
             print("No file selected.")
