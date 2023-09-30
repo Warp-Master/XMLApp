@@ -205,8 +205,11 @@ class XMLApp:
         frame = ttk.Frame(notebook)
         notebook.add(frame, text=tab_name)
 
-        tree = ttk.Treeview(frame, columns=("status", "value", "valid_values"))
-        tree.pack(expand=tk.YES, fill=tk.BOTH)
+        tree = ttk.Treeview(frame, columns=("status", "value", "valid_values"), selectmode='browse')
+        scroll = ttk.Scrollbar(frame, orient='vertical', command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.pack(expand=False, fill='y', side='right')
+        tree.pack(expand=True, fill=tk.BOTH)
 
         tree.column("#0", width=270, minwidth=270)
         tree.column("status", width=150, minwidth=150)
@@ -223,10 +226,8 @@ class XMLApp:
         tree.bind("<Double-1>", self.edit_value)
         tree.bind("<Control-e>", self.edit_value)
 
-        self.populate_tree(tree, xml_element)
-
-        generate_button = ttk.Button(frame, text="Generate", command=lambda: generate_file(tree, tab_name))
-        generate_button.pack()
+        generate_button = ttk.Button(tree, text="Generate", command=lambda: generate_file(tree, tab_name))
+        generate_button.pack(expand=False, anchor='se', side='bottom')
 
         self.populate_tree(tree, xml_element)
 
