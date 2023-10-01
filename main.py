@@ -239,7 +239,7 @@ class XMLApp:
         tree.bind("<Control-e>", self.edit_value)
         tree.bind("<Control-r>", self.copy_group)
 
-        generate_button = ttk.Button(tree, text="Generate", command=lambda: generate_file(tree, tab_name))
+        generate_button = ttk.Button(tree, text="Export", command=lambda: generate_file(tree, tab_name))
         generate_button.pack(expand=False, anchor='se', side='bottom')
 
         self.populate_tree(tree, xml_element)
