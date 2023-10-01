@@ -113,10 +113,16 @@ def generate_file(tree, tree_title):
     if not file_path:
         return
 
+    def write_tree(f, parent, level=0):
+        for child in tree.get_children(parent):
+            line = '\t' * level + tree.item(child, 'text') + '\t'
+            line += '\t'.join(tree.item(child, 'values'))
+            f.write(line + '\n')
+            write_tree(f, child, level + 1)
+
     with open(file_path, 'w') as file:
         file.write(f"{tree_title}\n")
-        for rowid in tree.get_children():
-            file.write(tree.get_line(rowid)+'\n')
+        write_tree(file, '', 0)
 
 
 class XMLApp:
@@ -239,7 +245,7 @@ class XMLApp:
         tree.bind("<Control-e>", self.edit_value)
         tree.bind("<Control-r>", self.copy_group)
 
-        generate_button = ttk.Button(tree, text="Export", command=lambda: generate_file(tree, tab_name))
+        generate_button = ttk.Button(tree, text="Generate", command=lambda: generate_file(tree, tab_name))
         generate_button.pack(expand=False, anchor='se', side='bottom')
 
         self.populate_tree(tree, xml_element)
