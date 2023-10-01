@@ -8,8 +8,8 @@ from tkinter import ttk, simpledialog
 
 from ttkthemes import ThemedTk
 
-from scrollable_notebook import ScrollableNotebook
-from switch import Switch
+from ScrollableNotebook import ScrollableNotebook
+from Switch import Switch
 
 
 class MyTreeview(ttk.Treeview):
