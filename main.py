@@ -1,14 +1,23 @@
 import os
 import tkinter as tk
 import xml.etree.ElementTree as ET
+from collections import Counter
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk, simpledialog
 
 from ttkthemes import ThemedTk
 
-from switch import Switch
 from scrollable_notebook import ScrollableNotebook
+from switch import Switch
+
+
+class MyTreeview(ttk.Treeview):
+    def get_line(self, rowid):
+        return '\t'.join((
+            self.item(rowid, 'text'),
+            *self.item(rowid, 'values')
+        ))
 
 
 class StartFrame(ttk.Frame):
@@ -104,16 +113,10 @@ def generate_file(tree, tree_title):
     if not file_path:
         return
 
-    def write_row(f, rid):
-        f.write('\t'.join((
-            tree.item(rid, 'text'),
-            *tree.item(rid, 'values')
-        ))+'\n')
-
     with open(file_path, 'w') as file:
         file.write(f"{tree_title}\n")
         for rowid in tree.get_children():
-            write_row(file, rowid)
+            file.write(tree.get_line(rowid)+'\n')
 
 
 class XMLApp:
@@ -130,31 +133,24 @@ class XMLApp:
         self.start_frame = StartFrame(self.root, self)  # Обратите внимание, что мы передаем self как controller
         self.start_frame.pack(expand=tk.YES, fill=tk.BOTH)
 
-    def copy_selected_value(self, event):
+    def copy_line(self, event):
         rowid = event.widget.focus()
-        line = '\t'.join((
-            event.widget.item(rowid, 'text'),
-            *event.widget.item(rowid, 'values')
-        ))
+        line = event.widget.get_line(rowid)
         if line:
             self.root.clipboard_clear()
             self.root.clipboard_append(line)
             self.root.update()
 
-    def copy_values(self, event):
-        self.root.clipboard_clear()
+    def copy_group(self, event):
         tree = event.widget
-        selected_item = tree.focus()
+        rowid = tree.focus()
 
-        if tree.item(selected_item, 'open'):
-            children = tree.get_children(selected_item)
-
-            for child in children:
-                line = '\t'.join((
-                    event.widget.item(child, 'text'),
-                    *event.widget.item(child, 'values')
-                ))
-                self.root.clipboard_append(line + "\n")
+        children = tree.get_children(rowid)
+        self.root.clipboard_clear()
+        self.root.clipboard_append('\n'.join(  # all lines
+            tree.get_line(child) for child in children
+        ))
+        self.root.update()
 
     @staticmethod
     def edit_value(event):
@@ -221,7 +217,7 @@ class XMLApp:
         frame = ttk.Frame(notebook)
         notebook.add(frame, text=tab_name)
 
-        tree = ttk.Treeview(frame, columns=("status", "value", "valid_values"), selectmode='browse')
+        tree = MyTreeview(frame, columns=("status", "value", "valid_values"), selectmode='browse')
         scroll = ttk.Scrollbar(frame, orient='vertical', command=tree.yview)
         tree.configure(yscrollcommand=scroll.set)
         scroll.pack(expand=False, fill='y', side='right')
@@ -237,11 +233,11 @@ class XMLApp:
         tree.heading("value", text="Value")
         tree.heading("valid_values", text="Valid Values")
 
-        tree.bind("<Button-3>", self.copy_selected_value)
-        tree.bind("<Control-c>", self.copy_selected_value)
+        tree.bind("<Button-3>", self.copy_line)
+        tree.bind("<Control-c>", self.copy_line)
         tree.bind("<Double-1>", self.edit_value)
         tree.bind("<Control-e>", self.edit_value)
-        tree.bind("<Control-r>", self.copy_values)
+        tree.bind("<Control-r>", self.copy_group)
 
         generate_button = ttk.Button(tree, text="Generate", command=lambda: generate_file(tree, tab_name))
         generate_button.pack(expand=False, anchor='se', side='bottom')
@@ -249,17 +245,28 @@ class XMLApp:
         self.populate_tree(tree, xml_element)
 
     # Метод для добавления элементов в дерево
-    def populate_tree(self, tree, elem, parent="", level=1):
+    def populate_tree(self, tree, elem, parent=""):
         namespaces = {
             "tr": "urn:IEEE-1636.1:2011:01:TestResults",
             "c": "urn:IEEE-1671:2010:Common"
         }
+        group_map = dict()
+        counter = Counter()
+        for child in elem:
+            name = child.attrib.get('callerName', child.attrib.get('name'))
+            if name is None:
+                continue
+            counter[name] += 1
 
-        prev_name = None
-        prev_id = None
+        for name, cnt in counter.items():
+            if counter[name] > 1:
+                group_map[name] = tree.insert(parent, tk.END, text=name)
 
         for child in elem:
-            name = child.attrib.get('callerName', child.attrib.get('name', 'Unknown'))
+            name = child.get('callerName', child.get('name'))
+            if name is None:
+                continue
+            parent = group_map.get(name, parent)
 
             # Извлечение значения атрибута 'value' из тега 'tr:Outcome'
             outcome = child.find('./tr:Outcome', namespaces=namespaces)
@@ -280,23 +287,10 @@ class XMLApp:
                 high_limit = high_limit_elem.get("value") if high_limit_elem is not None else ' '
 
                 valid_values_str = f"{low_limit} < > {high_limit}"
+                values = (status, value, valid_values_str)
 
-                if name == "Unknown":
-                    continue
-
-                if prev_name == name and level == 1:
-                    # Если текущее значение name совпадает с предыдущим и уровень вложенности равен 1, создаем список
-                    if prev_id is None:
-                        parent_id = tree.insert(parent, tk.END, text=name)
-                    else:
-                        parent_id = tree.insert(prev_id, tk.END, text=name)
-                else:
-                    parent_id = tree.insert(parent, tk.END, text=name, values=(
-                        status, value, valid_values_str))
-                    prev_name = name
-                    prev_id = parent_id
-
-                self.populate_tree(tree, child, parent=parent_id, level=level + 1)
+                new_id = tree.insert(parent, tk.END, text=name, values=values)
+                self.populate_tree(tree, child, parent=new_id)
 
 
 def main():
@@ -306,4 +300,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()  # Теперь main() вызывается только при прямом запуске файла
+    main()
