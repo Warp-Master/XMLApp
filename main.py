@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk, simpledialog
+from typing import Tuple
 
 from ScrollableNotebook import ScrollableNotebook
 from Switch import Switch
@@ -115,21 +116,22 @@ class StartFrame(ttk.Frame):
         self.controller.start_analysis(file_path)
 
 
-def generate_file(tree, tree_title):
-    filetypes = [("TeX files", "*.tex"), ("Text", "*.txt")]
+def generate_file(*trees: Tuple[str, MyTreeview]):
+    filetypes = [("TeX", "*.tex"), ("Text", "*.txt")]
     file_path = filedialog.asksaveasfilename(defaultextension=".tex", filetypes=filetypes)
     if not file_path:
         return
 
     with open(file_path, 'w') as file:
-        file.write(f"{tree_title}\n")
-        tree.write(file)
+        for tree_title, tree in trees:
+            file.write(f"{tree_title}\n")
+            tree.write(file)
 
 
 class XMLApp:
     def __init__(self, root):
-        self.tab_control = ttk.Notebook(root)
         self.root = root
+        self.treeviews = []
         self.root.title("XML Viewer")
         self.root.geometry("700x330")
         self.root.resizable(False, False)
@@ -186,7 +188,6 @@ class XMLApp:
             print(f"Failed to parse XML: {e}")
             return
 
-        # self.add_treeview(root, "Full Tree", tab_control)  # Здесь создается вкладка с полным деревом
         self.populate_root_notebook(root, root_note)
 
     def populate_root_notebook(self, xml_root, tab_control):
@@ -215,7 +216,9 @@ class XMLApp:
         for child in xml_element:
             child_name = child.get('callerName', child.get('name'))
             if child_name is not None:
-                self.add_treeview_tab(child, child_name, sub_notebook)
+                self.treeviews.append(
+                    (child_name, self.add_treeview_tab(child, child_name, sub_notebook))
+                )
 
     def add_treeview_tab(self, xml_element, tab_name, notebook):
         # Создаем Frame для каждой вкладки
@@ -244,10 +247,16 @@ class XMLApp:
         tree.bind("<Control-e>", self.edit_value)
         tree.bind("<Control-r>", self.copy_group)
 
-        generate_button = ttk.Button(tree, text="Generate", command=lambda: generate_file(tree, tab_name))
-        generate_button.pack(expand=False, anchor='se', side='bottom')
+        export_button = ttk.Button(tree, text='Export This',
+                                   command=lambda: generate_file((tab_name, tree)))
+        export_all_button = ttk.Button(tree, text="Export All",
+                                       width=export_button['width'],
+                                       command=lambda: generate_file(*self.treeviews))
+        export_all_button.pack(expand=False, anchor='se', side='bottom')
+        export_button.pack(expand=False, anchor='se', side='bottom')
 
         self.populate_tree(tree, xml_element)
+        return tree
 
     # Метод для добавления элементов в дерево
     def populate_tree(self, tree, elem, parent=""):
