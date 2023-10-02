@@ -258,56 +258,55 @@ class XMLApp:
             "tr": "urn:IEEE-1636.1:2011:01:TestResults",
             "c": "urn:IEEE-1671:2010:Common"
         }
-        group_map = dict()
-        counter = Counter()
-        for child in elem:
-            name = child.attrib.get('callerName', child.attrib.get('name'))
-            if name is None:
-                continue
-            counter[name] += 1
 
-        for name, cnt in counter.items():
-            if counter[name] > 1:
-                group_map[name] = tree.insert(parent, tk.END, text=name)
-
-        for child in elem:
-            name = child.get('callerName', child.get('name'))
-            if name is None:
-                continue
-            curr_parent = group_map.get(name, parent)
-
-            # Извлечение значения атрибута 'value' из тега 'tr:Outcome'
-            if (outcome := child.find('./tr:Outcome', namespaces=namespaces)) is None:
-                outcome = child.find('./tr:ActionOutcome', namespaces=namespaces)
+        name = elem.get('callerName', elem.get('name'))
+        if name is not None:
+            # Извлечение значения атрибута 'value' из тега 'tr:Outcome' или 'tr:ActionOutcome'
+            if (outcome := elem.find('./tr:Outcome', namespaces=namespaces)) is None:
+                outcome = elem.find('./tr:ActionOutcome', namespaces=namespaces)
             status = outcome.get('value', 'N/A') if outcome is not None else 'N/A'
 
-            # Извлечение данных из тега 'tr:TestResult'
-            test_result_elems = child.findall('.//tr:TestResult', namespaces=namespaces)
-            if not test_result_elems:
-                if child.tag.endswith("SessionAction"):
-                    tree.insert(curr_parent, tk.END, text=name, values=(status, '', ''))
-                elif child.tag.endswith("Test"):
-                    value_elem = child.find('./tr:Data/c:Collection/c:Item/c:Datum', namespaces=namespaces)
-                    value = value_elem.get('value', 'N/A') if value_elem is not None else 'N/A'
-                    tree.insert(curr_parent, tk.END, text=name, values=(status, value, ''))
-                continue
-            for test_result in test_result_elems:
-                value_elem = test_result.find("./tr:TestData/c:Datum", namespaces=namespaces)
+            if elem.tag.endswith("SessionAction"):
+                parent = tree.insert(parent, tk.END, text=name, values=(status, '', ''))
+            elif elem.tag.endswith("Test"):
+                value_elem = elem.find('./tr:Data/c:Collection/c:Item/c:Datum', namespaces=namespaces)
+                value = value_elem.get('value', 'N/A') if value_elem is not None else 'N/A'
+                parent = tree.insert(parent, tk.END, text=name, values=(status, value, ''))
+            elif elem.tag.endswith("TestResult"):
+                value_elem = elem.find("./tr:TestData/c:Datum", namespaces=namespaces)
                 value = value_elem.get("value") if value_elem is not None else 'N/A'
 
-                low_limit_elem = test_result.find(
-                    "./tr:TestLimits/tr:Limits/c:LimitPair/c:Limit[@comparator='GE']/c:Datum", namespaces=namespaces)
+                low_limit_elem = elem.find(
+                    "./tr:TestLimits/tr:Limits/c:LimitPair/c:Limit[@comparator='GE']/c:Datum",
+                    namespaces=namespaces)
                 low_limit = low_limit_elem.get("value") if low_limit_elem is not None else ' '
 
-                high_limit_elem = test_result.find(
-                    "./tr:TestLimits/tr:Limits/c:LimitPair/c:Limit[@comparator='LE']/c:Datum", namespaces=namespaces)
+                high_limit_elem = elem.find(
+                    "./tr:TestLimits/tr:Limits/c:LimitPair/c:Limit[@comparator='LE']/c:Datum",
+                    namespaces=namespaces)
                 high_limit = high_limit_elem.get("value") if high_limit_elem is not None else ' '
 
                 valid_values_str = f"{low_limit} < > {high_limit}"
                 values = (status, value, valid_values_str)
 
-                new_id = tree.insert(curr_parent, tk.END, text=name, values=values)
-                self.populate_tree(tree, child, parent=new_id)
+                parent = tree.insert(parent, tk.END, text=name, values=values)
+
+        group_map = dict()
+        existing = set()
+        for child in elem:
+            name = child.get('callerName', child.get('name'))
+            if name is None:
+                continue
+            if name in existing and name not in group_map:
+                group_map[name] = tree.insert(parent, tk.END, text=name)
+            existing.add(name)
+        del existing
+
+        for child in elem:
+            name = child.get('callerName', child.get('name'))
+            if name is None:
+                continue
+            self.populate_tree(tree, child, parent=group_map.get(name, parent))
 
 
 def main():
