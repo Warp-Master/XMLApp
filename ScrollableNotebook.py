@@ -41,7 +41,7 @@ class ScrollableNotebook(ttk.Frame):
         tabListMenu = tk.Menu(self, tearoff=0)
         for tab in self.notebookTab.tabs():
             tabListMenu.add_command(label=self.notebookTab.tab(tab, option="text"),
-                                    command=lambda temp=tab: self.select(temp))
+                                    command=lambda: self.select(tab))
         try:
             tabListMenu.tk_popup(event.x_root, event.y_root)
         finally:
