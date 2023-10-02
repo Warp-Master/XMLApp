@@ -5,8 +5,6 @@ from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk, simpledialog
 
-from ttkthemes import ThemedTk
-
 from ScrollableNotebook import ScrollableNotebook
 from Switch import Switch
 
@@ -73,24 +71,11 @@ class StartFrame(ttk.Frame):
 
         ttk.Button(self, text="Start", command=self.start).grid(row=4, column=0, padx=5, pady=5)
 
-        self.theme_combobox = ttk.Combobox(self, values=self.controller.available_themes)
-        if self.controller.available_themes:
-            self.theme_combobox.set(self.controller.available_themes[0])
-        self.theme_combobox.grid(row=4, column=1, padx=65, pady=5, ipady=2, rowspan=4, sticky='w')
-
-        self.apply_button = ttk.Button(self, text="Применить", command=self.apply_theme)
-        self.apply_button.grid(row=4, column=1, padx=5, pady=5, sticky='e')
-
         self.populate_file_list(os.path.dirname(os.path.abspath(__file__)))
 
         # Конфигурация grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(3, weight=1)
-
-    def apply_theme(self):
-        selected_theme = self.theme_combobox.get()  # Получаем выбранную тему
-        if selected_theme:
-            self.controller.root.set_theme(selected_theme)  # Применяем выбранную тему
 
     def toggle_dir_choice(self):
         if self.switch.is_on:  # Используйте свойство is_on нового виджета Switch
@@ -145,8 +130,6 @@ class XMLApp:
     def __init__(self, root):
         self.tab_control = ttk.Notebook(root)
         self.root = root
-        self.available_themes = self.root.get_themes()
-        self.root.set_theme('blue')
         self.root.title("XML Viewer")
         self.root.geometry("700x330")
         self.root.resizable(False, False)
@@ -324,7 +307,7 @@ class XMLApp:
 
 
 def main():
-    root = ThemedTk()  # Используем ThemedTk вместо стандартного Tk
+    root = tk.Tk()
     XMLApp(root)
     root.mainloop()
 
