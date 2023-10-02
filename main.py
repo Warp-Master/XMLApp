@@ -1,7 +1,6 @@
 import os
 import tkinter as tk
 import xml.etree.ElementTree as ET
-from collections import Counter
 from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk, simpledialog
@@ -12,12 +11,39 @@ from ScrollableNotebook import ScrollableNotebook
 from Switch import Switch
 
 
+def lookahead(iterable):
+    # Get an iterator and pull the first value.
+    it = iter(iterable)
+    try:
+        last = next(it)
+    except StopIteration:
+        return
+    # Run the iterator to exhaustion (starting from the second value).
+    for val in it:
+        # Report the *previous* value (more to come).
+        yield last, False
+        last = val
+    # Report the last value.
+    yield last, True
+
+
 class MyTreeview(ttk.Treeview):
     def get_line(self, rowid):
         return '\t'.join((
             self.item(rowid, 'text'),
             *self.item(rowid, 'values')
         ))
+
+    def write(self, f, parent='', is_latest_parent=False, level=0):
+        for child, is_latest in lookahead(self.get_children(parent)):
+            prefix = ' '.join((
+                *('│' * (level - is_latest_parent)),
+                '  ' * is_latest_parent + '└─' if is_latest else '├─'
+            ))
+
+            line = prefix + self.get_line(child).rstrip() + '\n'
+            f.write(line)
+            self.write(f, child, is_latest, level + 1)
 
 
 class StartFrame(ttk.Frame):
@@ -60,9 +86,6 @@ class StartFrame(ttk.Frame):
         # Конфигурация grid
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(3, weight=1)
-
-    def generate_tex(self):
-        self.controller.generate_file(self.controller.start_frame.file_treeview, )
 
     def apply_theme(self):
         selected_theme = self.theme_combobox.get()  # Получаем выбранную тему
@@ -113,30 +136,21 @@ def generate_file(tree, tree_title):
     if not file_path:
         return
 
-    def write_tree(f, parent, level=0):
-        for child in tree.get_children(parent):
-            line = '\t' * level + tree.item(child, 'text') + '\t'
-            line += '\t'.join(tree.item(child, 'values'))
-            f.write(line + '\n')
-            write_tree(f, child, level + 1)
-
     with open(file_path, 'w') as file:
         file.write(f"{tree_title}\n")
-        write_tree(file, '', 0)
+        tree.write(file)
 
 
 class XMLApp:
     def __init__(self, root):
         self.tab_control = ttk.Notebook(root)
-        self.menu = None
-        self.file_menu = None
         self.root = root
         self.available_themes = self.root.get_themes()
         self.root.set_theme('blue')
         self.root.title("XML Viewer")
         self.root.geometry("700x330")
         self.root.resizable(False, False)
-        self.start_frame = StartFrame(self.root, self)  # Обратите внимание, что мы передаем self как controller
+        self.start_frame = StartFrame(root, self)  # Обратите внимание, что мы передаем self как controller
         self.start_frame.pack(expand=tk.YES, fill=tk.BOTH)
 
     def copy_line(self, event):
