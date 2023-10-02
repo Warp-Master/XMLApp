@@ -24,7 +24,6 @@ class StartFrame(ttk.Frame):
     def __init__(self, container, controller, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
         self.controller = controller
-        self.file_treeview = MyTreeview(self)
 
         # Левая часть
         self.switch_frame = ttk.Frame(self)
@@ -199,9 +198,9 @@ class XMLApp:
         for elem in xml_root.findall('.//tr:ResultSet', namespaces=namespaces):
             for child in elem.findall('./*', namespaces=namespaces):
                 tag = child.tag.split('}')[-1]
-                name = child.get('callerName', child.get('name', 'Unknown'))
+                name = child.get('callerName', child.get('name'))
                 if tag == 'Test':
-                    self.populate_tree(self.start_frame.file_treeview, child, parent='')
+                    self.add_treeview_tab(child, name, tab_control)
                 elif tag == 'TestGroup':
                     if name != "Unknown":
                         self.add_root_tab(child, name, tab_control)
@@ -217,8 +216,8 @@ class XMLApp:
 
         # Теперь для каждого дочернего элемента xml_element добавим вкладку в sub_notebook
         for child in xml_element:
-            child_name = child.get('callerName', child.get('name', 'Unknown'))
-            if child_name != "Unknown":
+            child_name = child.get('callerName', child.get('name'))
+            if child_name is not None:
                 self.add_treeview_tab(child, child_name, sub_notebook)
 
     def add_treeview_tab(self, xml_element, tab_name, notebook):
@@ -275,14 +274,23 @@ class XMLApp:
             name = child.get('callerName', child.get('name'))
             if name is None:
                 continue
-            parent = group_map.get(name, parent)
+            curr_parent = group_map.get(name, parent)
 
             # Извлечение значения атрибута 'value' из тега 'tr:Outcome'
-            outcome = child.find('./tr:Outcome', namespaces=namespaces)
-            status = outcome.get('value') if outcome is not None else 'N/A'
+            if (outcome := child.find('./tr:Outcome', namespaces=namespaces)) is None:
+                outcome = child.find('./tr:ActionOutcome', namespaces=namespaces)
+            status = outcome.get('value', 'N/A') if outcome is not None else 'N/A'
 
             # Извлечение данных из тега 'tr:TestResult'
             test_result_elems = child.findall('.//tr:TestResult', namespaces=namespaces)
+            if not test_result_elems:
+                if child.tag.endswith("SessionAction"):
+                    tree.insert(curr_parent, tk.END, text=name, values=(status, '', ''))
+                elif child.tag.endswith("Test"):
+                    value_elem = child.find('./tr:Data/c:Collection/c:Item/c:Datum', namespaces=namespaces)
+                    value = value_elem.get('value', 'N/A') if value_elem is not None else 'N/A'
+                    tree.insert(curr_parent, tk.END, text=name, values=(status, value, ''))
+                continue
             for test_result in test_result_elems:
                 value_elem = test_result.find("./tr:TestData/c:Datum", namespaces=namespaces)
                 value = value_elem.get("value") if value_elem is not None else 'N/A'
@@ -298,7 +306,7 @@ class XMLApp:
                 valid_values_str = f"{low_limit} < > {high_limit}"
                 values = (status, value, valid_values_str)
 
-                new_id = tree.insert(parent, tk.END, text=name, values=values)
+                new_id = tree.insert(curr_parent, tk.END, text=name, values=values)
                 self.populate_tree(tree, child, parent=new_id)
 
 
