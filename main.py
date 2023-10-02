@@ -24,6 +24,7 @@ class StartFrame(ttk.Frame):
     def __init__(self, container, controller, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
         self.controller = controller
+        self.file_treeview = MyTreeview(self)
 
         # Левая часть
         self.switch_frame = ttk.Frame(self)
@@ -198,8 +199,10 @@ class XMLApp:
         for elem in xml_root.findall('.//tr:ResultSet', namespaces=namespaces):
             for child in elem.findall('./*', namespaces=namespaces):
                 tag = child.tag.split('}')[-1]
-                if tag in ('TestGroup', 'Test'):
-                    name = child.get('callerName', child.get('name', 'Unknown'))
+                name = child.get('callerName', child.get('name', 'Unknown'))
+                if tag == 'Test':
+                    self.populate_tree(self.start_frame.file_treeview, child, parent='')
+                elif tag == 'TestGroup':
                     if name != "Unknown":
                         self.add_root_tab(child, name, tab_control)
 
