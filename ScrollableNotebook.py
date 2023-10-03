@@ -12,6 +12,9 @@ class ScrollableNotebook(ttk.Frame):
         self.notebook_tab.bind("<<NotebookTabChanged>>", self._tab_changer)
         if wheelscroll:
             self.notebook_tab.bind("<MouseWheel>", self._wheelscroll)
+            # on some linux systems these events sent instead of <MouseWheel>
+            self.notebook_tab.bind("<Button-4>", self._wheelscroll)
+            self.notebook_tab.bind("<Button-5>", self._wheelscroll)
         slide_frame = ttk.Frame(self)
         slide_frame.place(relx=1.0, x=0, y=1, anchor=tk.NE)
         self.menu_space = 30
@@ -32,7 +35,7 @@ class ScrollableNotebook(ttk.Frame):
         self.contents_managed = []
 
     def _wheelscroll(self, event):
-        if event.delta > 0:
+        if event.delta > 0 or event.num == 4:
             self._left_slide(event)
         else:
             self._right_slide(event)
