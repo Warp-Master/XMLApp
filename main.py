@@ -122,7 +122,7 @@ def generate_file(*trees: Tuple[str, MyTreeview]):
     if not file_path:
         return
 
-    with open(file_path, 'w') as file:
+    with open(file_path, 'w', encoding='utf-8') as file:
         for tree_title, tree in trees:
             file.write(f"{tree_title}\n")
             tree.write(file)
