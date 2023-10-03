@@ -37,7 +37,7 @@ class MyTreeview(ttk.Treeview):
         for child, is_latest in lookahead(self.get_children(parent)):
             prefix = ' '.join((
                 *('│' * (level - is_latest_parent)),
-                '  ' * is_latest_parent + '└─' if is_latest else '├─'
+                '  ' * is_latest_parent + ('└─' if is_latest else '├─')
             ))
 
             line = prefix + self.get_line(child).rstrip() + '\n'
